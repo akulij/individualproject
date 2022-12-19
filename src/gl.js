@@ -1,17 +1,52 @@
 import { mat4 } from 'gl-matrix';
 
+var matrices = {
+    rotationMatrix: [
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 1],
+    ],
+    moveMatrix: [
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 1],
+    ],
+    scaleMatrix: [
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 1],
+    ],
+}
+
 // Vertex shader program
 const vsSource = `
     attribute vec4 aVertexPosition;
-    uniform mat4 uModelViewMatrix;
-    uniform mat4 uProjectionMatrix;
+    attribute vec4 aVertexColor;
+
+    uniform mat4 uRotationMatrix;
+    uniform mat4 uMoveMatrix;
+    uniform mat4 uScaleMatrix;
+
+    varying lowp vec4 vColor;
+
     void main() {
-      gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+      vColor = aVertexColor;
+      vec4 pos;
+      pos.xy = aVertexPosition.yx;
+      pos.xy *= .35;
+      // pos.x += 0.775;
+      pos.a = 1.;
+      gl_Position = uMoveMatrix * uScaleMatrix * uRotationMatrix * pos;
+      // gl_Position = uRotationMatrix * pos;
+      // gl_Position = aVertexPosition;
     }
   `;
 const fsSource = `
+    varying lowp vec4 vColor;
+
     void main() {
-      gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+      gl_FragColor = vec4(1.0, 1.0, 0.0, 0.1);
+      gl_FragColor = vColor;
     }
   `;
 //
@@ -72,9 +107,11 @@ function loadShader(gl, type, source) {
 
 function initBuffers(gl) {
   const positionBuffer = initPositionBuffer(gl);
-
+  const colorBuffer = initColorBuffer(gl);
+  
   return {
     position: positionBuffer,
+    color: colorBuffer,
   };
 }
 
@@ -95,6 +132,42 @@ function initPositionBuffer(gl) {
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
   return positionBuffer;
+}
+function initColorBuffer(gl) {
+  const colors = [
+    1.0,
+    1.0,
+    1.0,
+    1.0, // white
+    1.0,
+    0.0,
+    0.0,
+    1.0, // red
+    0.0,
+    1.0,
+    0.0,
+    1.0, // green
+    0.0,
+    0.0,
+    1.0,
+    1.0, // blue
+  ];
+
+  const colorBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+
+  return colorBuffer;
+}
+
+function matrixToFloatArray(m) {
+    let array = new Float32Array(16)
+    m.forEach((row, y) => row.forEach((value, x) => {
+        array[y * 4 + x] = value
+    }))
+    array[15] = 1
+    console.log(array)
+    return array
 }
 
 function drawScene(gl, programInfo, buffers) {
@@ -118,41 +191,37 @@ function drawScene(gl, programInfo, buffers) {
   const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
   const zNear = 0.1;
   const zFar = 100.0;
-  const projectionMatrix = mat4.create();
-
-  // note: glmatrix.js always has the first argument
-  // as the destination to receive the result.
-  mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
-
-  // Set the drawing position to the "identity" point, which is
-  // the center of the scene.
-  const modelViewMatrix = mat4.create();
-
-  // Now move the drawing position a bit to where we want to
-  // start drawing the square.
-  mat4.translate(
-    modelViewMatrix, // destination matrix
-    modelViewMatrix, // matrix to translate
-    [-0.0, 0.0, -6.0]
-  ); // amount to translate
 
   // Tell WebGL how to pull out the positions from the position
   // buffer into the vertexPosition attribute.
   setPositionAttribute(gl, buffers, programInfo);
+
+  setColorAttribute(gl, buffers, programInfo);
+
+  let rotationMatrix = matrixToFloatArray(matrices.rotationMatrix)
+  let moveMatrix = matrixToFloatArray(matrices.moveMatrix)
+  let scaleMatrix = matrixToFloatArray(matrices.scaleMatrix)
+
+  mat4.scale(scaleMatrix, scaleMatrix, [fieldOfView, 1, 1])
 
   // Tell WebGL to use our program when drawing
   gl.useProgram(programInfo.program);
 
   // Set the shader uniforms
   gl.uniformMatrix4fv(
-    programInfo.uniformLocations.projectionMatrix,
+    programInfo.uniformLocations.rotationMatrix,
     false,
-    projectionMatrix
+    rotationMatrix
   );
   gl.uniformMatrix4fv(
-    programInfo.uniformLocations.modelViewMatrix,
+    programInfo.uniformLocations.moveMatrix,
     false,
-    modelViewMatrix
+    moveMatrix
+  );
+  gl.uniformMatrix4fv(
+    programInfo.uniformLocations.scaleMatrix,
+    false,
+    scaleMatrix
   );
 
   {
@@ -181,6 +250,26 @@ function setPositionAttribute(gl, buffers, programInfo) {
     offset
   );
   gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+}
+
+// Tell WebGL how to pull out the colors from the color buffer
+// into the vertexColor attribute.
+function setColorAttribute(gl, buffers, programInfo) {
+  const numComponents = 4;
+  const type = gl.FLOAT;
+  const normalize = false;
+  const stride = 0;
+  const offset = 0;
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffers.color);
+  gl.vertexAttribPointer(
+    programInfo.attribLocations.vertexColor,
+    numComponents,
+    type,
+    normalize,
+    stride,
+    offset
+  );
+  gl.enableVertexAttribArray(programInfo.attribLocations.vertexColor);
 }
 
 export function start() {
@@ -212,10 +301,12 @@ export function start() {
     program: shaderProgram,
     attribLocations: {
       vertexPosition: gl.getAttribLocation(shaderProgram, "aVertexPosition"),
+        vertexColor: gl.getAttribLocation(shaderProgram, "aVertexColor"),
     },
     uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(shaderProgram, "uProjectionMatrix"),
-      modelViewMatrix: gl.getUniformLocation(shaderProgram, "uModelViewMatrix"),
+      rotationMatrix: gl.getUniformLocation(shaderProgram, "uRotationMatrix"),
+      moveMatrix: gl.getUniformLocation(shaderProgram, "uMoveMatrix"),
+      scaleMatrix: gl.getUniformLocation(shaderProgram, "uScaleMatrix"),
     },
   };
   // Here's where we call the routine that builds all the
@@ -226,3 +317,6 @@ export function start() {
   drawScene(gl, programInfo, buffers);
 }
 
+export function updateMatrix(type, value) {
+    matrices[type] = value
+}

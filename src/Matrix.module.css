@@ -1,0 +1,104 @@
+:root {
+    --matrix-border-color: #333;
+    --matrix-text-color: #111;
+}
+
+.Matrix {
+    /* display: inline-block; */
+    /* border: 2px solid black; */
+    position: relative;
+}
+
+.matrix_row {
+    display: flex;
+}
+
+.matrix_cell {
+    width: 50px;
+    height: 50px;
+    margin: 4px;
+    color: var(--matrix-text-color);
+    border: none;
+    text-align: center;
+    font-size: 19px;
+    font-weight: 500;
+    vertical-align: middle;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.matrix_desc {
+    width: 50px;
+    height: 50px;
+    margin: 4px;
+    color: var(--matrix-text-color);
+    border: none;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 400;
+    vertical-align: middle;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.matrix_lbracket {
+    position: absolute;
+    width: 2px;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    background-color: var(--matrix-border-color);
+    margin-right: 4px;
+}
+
+.matrix_lbracket::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 10px;
+    height: 2px;
+    background-color: var(--matrix-border-color);
+}
+
+.matrix_lbracket::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 10px;
+    height: 2px;
+    background-color: var(--matrix-border-color);
+}
+
+.matrix_rbracket {
+    position: absolute;
+    width: 2px;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    background-color: var(--matrix-border-color);
+    margin-left: 4px;
+}
+
+.matrix_rbracket::before {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 10px;
+    height: 2px;
+    background-color: var(--matrix-border-color);
+}
+
+.matrix_rbracket::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 10px;
+    height: 2px;
+    background-color: var(--matrix-border-color);
+}
