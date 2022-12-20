@@ -163,7 +163,9 @@ function initColorBuffer(gl) {
 function matrixToFloatArray(m) {
     let array = new Float32Array(16)
     m.forEach((row, y) => row.forEach((value, x) => {
-        array[y * 4 + x] = value
+        let xa = x + 1 == array[0].length ? 3 : x
+        let ya = x + 1 == array.length ? 3 : y
+        array[ya * 4 + xa] = value
     }))
     array[15] = 1
     console.log(array)
